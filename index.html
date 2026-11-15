@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What four coding agents cost on SWE-bench Verified</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f6f5f2; --surface: #fcfcfb; --line: #e3e1da; --grid: #ebe9e3;
+    --text: #0b0b0b; --text-2: #52514e; --text-3: #7d7b75;
+    --agency: #2a78d6; --pi: #eb6834; --opencode: #1baf7a; --mini: #eda100;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #121211; --surface: #1a1a19; --line: #2e2e2b; --grid: #262624;
+      --text: #f0efec; --text-2: #c3c2b7; --text-3: #8f8e86;
+      --agency: #3987e5; --pi: #d95926; --opencode: #199e70; --mini: #c98500;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #121211; --surface: #1a1a19; --line: #2e2e2b; --grid: #262624;
+    --text: #f0efec; --text-2: #c3c2b7; --text-3: #8f8e86;
+    --agency: #3987e5; --pi: #d95926; --opencode: #199e70; --mini: #c98500;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--text);
+    font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 920px; margin: 0 auto; padding: 40px 16px 72px; }
+  h1 { font-size: 30px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -0.01em; }
+  h2 { font-size: 20px; margin: 44px 0 6px; }
+  p { margin: 8px 0; max-width: 68ch; }
+  .lede { color: var(--text-2); font-size: 18px; }
+  .note { color: var(--text-2); font-size: 14px; }
+  a { color: inherit; text-decoration-color: var(--text-3); text-underline-offset: 3px; }
+  code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--grid);
+    padding: 1px 5px; border-radius: 4px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin: 24px 0 8px; }
+  .tile, .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+  .tile { padding: 14px 16px; }
+  .tile .label { color: var(--text-2); font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  .tile .value { font-size: 30px; font-weight: 650; letter-spacing: -0.02em; margin-top: 2px; }
+  .tile .value small { font-size: 13px; font-weight: 400; color: var(--text-2); letter-spacing: 0; }
+  .tile .sub { color: var(--text-2); font-size: 13px; }
+  .swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex: none; }
+  .card { padding: 16px 16px 10px; margin: 14px 0; }
+  .card h3 { font-size: 15px; margin: 0; }
+  .card .sub { color: var(--text-2); font-size: 13px; margin: 2px 0 8px; max-width: none; }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  svg text { fill: var(--text-2); font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; }
+  svg .strong { fill: var(--text); font-weight: 600; }
+  svg .grid { stroke: var(--grid); stroke-width: 1; }
+  svg .axis { stroke: var(--line); stroke-width: 1; }
+  .hit { fill: transparent; }
+  #tip { position: fixed; pointer-events: none; background: var(--text); color: var(--page);
+    font-size: 12.5px; line-height: 1.4; padding: 6px 9px; border-radius: 6px; max-width: 280px;
+    opacity: 0; transition: opacity .08s; z-index: 10; white-space: pre-line; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: right; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--text-2); font-weight: 600; font-size: 13px; vertical-align: bottom; }
+  td .swatch { margin-right: 6px; }
+  .scroll { overflow-x: auto; }
+  ul { padding-left: 20px; max-width: 68ch; }
+  li { margin: 5px 0; }
+  footer { margin-top: 48px; color: var(--text-3); font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>What four coding agents cost on SWE-bench Verified</h1>
+  <p class="lede">Given the same model, four agents solve about the same share of tasks. What separates them is how many tokens they spend to do it.</p>
+  <p class="note">Model: GLM 5.3 Flash. All 500 tasks, runs of 11 to 14 November 2026. Every number on this page is computed from <a href="data/results.csv"><code>data/results.csv</code></a>.</p>
+
+  <div class="tiles" id="tiles"></div>
+  <p class="note" id="basis"></p>
+
+  <h2>Input tokens</h2>
+  <p>Input is everything the agent sends to the model: its instructions, its tool definitions, and the whole conversation so far, again on every call. It is where most of the tokens go.</p>
+  <div class="card">
+    <h3>Input tokens per run, in millions</h3>
+    <div class="sub">Fresh and cached input together. A small dot is one run; the bar is the mean.</div>
+    <div id="chart-input"></div>
+  </div>
+
+  <h2>Output tokens</h2>
+  <p>Output is what the model writes: its reasoning, its tool calls, and its replies. It is a small share of the tokens and a larger share of the cost, because an output token costs more than three times a fresh input token.</p>
+  <div class="card">
+    <h3>Output tokens per run, in millions</h3>
+    <div class="sub">Reasoning tokens are counted as output for every agent.</div>
+    <div id="chart-output"></div>
+  </div>
+
+  <h2>Cost</h2>
+  <div class="card">
+    <h3>Estimated cost per run, in dollars</h3>
+    <div class="sub">From token counts at the model host's list prices. The figure after each bar is the cost per solved task.</div>
+    <div id="chart-cost"></div>
+  </div>
+  <p id="cost-note"></p>
+
+  <h2>All the measures</h2>
+  <div class="card scroll"><table id="table-agents"></table></div>
+
+  <h2>Agency and Pi, side by side</h2>
+  <p>These two were run five times, started together for each attempt so both met the same conditions on the model host.</p>
+  <div class="card scroll"><table id="table-attempts"></table></div>
+  <p class="note" id="verdict"></p>
+
+  <h2>How the runs were set up</h2>
+  <ul>
+    <li><b>Benchmark:</b> SWE-bench Verified, all 500 tasks, one attempt per task in each run.</li>
+    <li><b>Model:</b> GLM 5.3 Flash through OpenRouter, pinned to the Z.AI host, reasoning effort high for every agent.</li>
+    <li><b>Agents:</b> the minimal brain of the <a href="https://github.com/egonSchiele/agency-lang">Agency</a> agent (commit <code>e0d23da8f</code> for attempts 1 and 2, <code>a80b90157</code> for attempt 3, <code>95b344b63</code> for attempt 4, and for attempt 5 <code>f13bfe1db</code> with one unmerged change, a single path argument on the file tools; a separate 99-task run found the first two level), Pi 1.5.2, OpenCode 1.19.5, and mini-SWE-agent 2.4.6.</li>
+    <li><b>No looking up the answer:</b> each sandbox could reach the model and nothing else. Package indexes and code hosts were blocked while the agent ran.</li>
+    <li><b>Sandboxes and grading:</b> Harbor 0.17.1 on Daytona, graded by Harbor's SWE-bench adapter with each task's own tests.</li>
+    <li><b>Left out:</b> eight tasks that fail in these sandboxes even with their reference fix applied, and any trial that failed on the sandbox side.</li>
+    <li><b>Cost:</b> $0.15 per million fresh input tokens, $0.03 per million cached, $0.50 per million output.</li>
+  </ul>
+
+  <h2>What to keep in mind</h2>
+  <ul>
+    <li><b>One model, one benchmark.</b> These results say nothing about another model, and SWE-bench Verified is Python bug fixing in twelve projects.</li>
+  </ul>
+
+  <h2>The data</h2>
+  <ul>
+    <li><a href="data/results.csv"><code>data/results.csv</code></a>: one row per run and task, with pass or fail, fresh and cached input tokens, output tokens, model calls, estimated cost, and minutes.</li>
+    <li><code>scripts/build_summary.py</code>: computes every figure on this page from the CSV.</li>
+  </ul>
+  <footer>The agents' patches, the grader's reports, and the raw transcripts are not published.</footer>
+</main>
+<div id="tip"></div>
+<script src="summary.js"></script>
+<script>
+const S = window.SUMMARY;
+const A = S.agents;
+const color = (a) => `var(--${a.key})`;
+const el = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const swatch = (a) => `<span class="swatch" style="background:${color(a)}"></span>`;
+const M = (v, d = 0) => (v / 1e6).toFixed(d) + "M";
+const pct = (a, b, d = 1) => (100 * a / b).toFixed(d) + "%";
+const cents = (v) => (100 * v).toFixed(1) + "¢";
+const runsWord = (a) => (a.runs.length === 1 ? "one run" : `mean of ${a.runs.length} runs`);
+
+// Tiles: cost first, then tokens. The share solved is the last, smallest line.
+el("tiles").innerHTML = A.map((a) => `
+  <div class="tile"><div class="label">${swatch(a)}${esc(a.name)}</div>
+  <div class="value">$${a.per_run.cost_usd.toFixed(2)} <small>per run</small></div>
+  <div class="sub">${M(a.per_run.input_tokens)} in, ${M(a.per_run.output_tokens, 1)} out</div>
+  <div class="sub">${cents(a.cost_per_solved_usd)} per solved task</div></div>`).join("");
+el("basis").textContent = `Totals are over the ${S.common_tasks} tasks graded in every run, so each agent is measured on the same tasks. Agency and Pi show the mean of ${S.pair.attempts} runs; OpenCode and mini-SWE-agent were run once.`;
+
+const tip = el("tip");
+function bindTips(root) {
+  root.querySelectorAll("[data-tip]").forEach((node) => {
+    node.addEventListener("mousemove", (e) => {
+      tip.textContent = node.getAttribute("data-tip"); tip.style.opacity = 1;
+      tip.style.left = Math.min(e.clientX + 12, window.innerWidth - tip.offsetWidth - 8) + "px";
+      tip.style.top = (e.clientY + 14) + "px";
+    });
+    node.addEventListener("mouseleave", () => (tip.style.opacity = 0));
+  });
+}
+const svg = (w, h, body) => `<svg viewBox="0 0 ${w} ${h}" role="img">${body}</svg>`;
+// A round step that covers the largest value in about four ticks.
+function niceStep(v) {
+  const raw = v / 4, p = Math.pow(10, Math.floor(Math.log10(raw)));
+  return [1, 2, 2.5, 5, 10].map((m) => m * p).find((s) => s >= raw);
+}
+
+// One horizontal bar per agent: the mean, with a dot for each run.
+function bars(id, value, runValue, fmt, after, tipLines, labelFmt = fmt) {
+  const W = 860, L = 176, R = 150, row = 40, H = A.length * row + 30;
+  const top = Math.max(...A.flatMap((a) => a.runs.map(runValue)));
+  const step = niceStep(top), ticks = Math.ceil(top / step), max = ticks * step;
+  const x = (v) => L + v / max * (W - L - R);
+  let b = "";
+  for (let i = 0; i <= ticks; i++) { const v = step * i; b +=`<line class="grid" x1="${x(v)}" x2="${x(v)}" y1="2" y2="${H - 26}"/><text x="${x(v)}" y="${H - 8}" text-anchor="middle">${fmt(v)}</text>`; }
+  A.forEach((a, j) => {
+    const y = 8 + j * row, v = value(a), w = x(v) - x(0);
+    b += `<text class="strong" x="${L - 14}" y="${y + 16}" text-anchor="end">${esc(a.name)}</text>`;
+    b += `<path d="M${x(0)},${y} H${x(0) + w - 4} q4,0 4,4 v16 q0,4 -4,4 H${x(0)} Z" fill="${color(a)}"/>`;
+    if (a.runs.length > 1) a.runs.forEach((r) => (b += `<circle cx="${x(runValue(r))}" cy="${y + 12}" r="3.5" fill="var(--surface)" stroke="var(--text)" stroke-width="1.5"/>`));
+    const far = Math.max(v, ...a.runs.map(runValue));
+    b += `<text x="${x(far) + 10}" y="${y + 16}"><tspan class="strong">${labelFmt(v)}</tspan>${after ? " · " + esc(after(a)) : ""}</text>`;
+    b += `<rect class="hit" x="${x(0)}" y="${y - 4}" width="${W - L - 10}" height="32" data-tip="${esc(a.name)} (${runsWord(a)})\n${esc(tipLines(a))}"/>`;
+  });
+  b += `<line class="axis" x1="${x(0)}" x2="${x(0)}" y1="2" y2="${H - 26}"/>`;
+  el(id).innerHTML = svg(W, H, b); bindTips(el(id));
+}
+const perRunList = (a, f) => a.runs.length > 1 ? "\nRuns: " + a.runs.map(f).join(", ") : "";
+bars("chart-input", (a) => a.per_run.input_tokens, (r) => r.input_tokens, (v) => M(v), null,
+  (a) => `${M(a.per_run.input_tokens, 1)} input tokens per run\n${(a.per_task.input_tokens / 1000).toFixed(0)}K per task\n${(100 * a.cached_share).toFixed(0)}% served from cache${perRunList(a, (r) => M(r.input_tokens))}`);
+bars("chart-output", (a) => a.per_run.output_tokens, (r) => r.output_tokens, (v) => M(v, 1), null,
+  (a) => `${M(a.per_run.output_tokens, 2)} output tokens per run\n${(a.per_task.output_tokens / 1000).toFixed(1)}K per task${perRunList(a, (r) => M(r.output_tokens, 2))}`);
+bars("chart-cost", (a) => a.per_run.cost_usd, (r) => r.cost_usd, (v) => "$" + v.toFixed(0),
+  (a) => `${cents(a.cost_per_solved_usd)} per solved task`,
+  (a) => `$${a.per_run.cost_usd.toFixed(2)} per run\n${cents(a.per_task.cost_usd)} per task\n${cents(a.cost_per_solved_usd)} per solved task${perRunList(a, (r) => "$" + r.cost_usd.toFixed(2))}`,
+  (v) => "$" + v.toFixed(2));
+
+const base = A[0];
+const more = (a, key) => Math.round(100 * (a.per_run[key] / base.per_run[key] - 1));
+el("cost-note").textContent = `Against ${base.name}, ` + A.slice(1).map((a) => `${a.name} used ${more(a, "input_tokens")}% more input tokens and cost ${more(a, "cost_usd")}% more`).join("; ") + ".";
+
+// Table: tokens and cost first, share solved last.
+el("table-agents").innerHTML = `<tr><th>Agent</th><th>Runs</th><th>Input tokens<br>per run</th><th>Output tokens<br>per run</th><th>Model calls<br>per task</th><th>Input from<br>cache</th><th>Cost<br>per run</th><th>Cost per<br>solved task</th><th>Solved</th></tr>` +
+  A.map((a) => `<tr><td>${swatch(a)}${esc(a.name)}</td><td>${a.runs.length}</td><td>${M(a.per_run.input_tokens, 1)}</td><td>${M(a.per_run.output_tokens, 2)}</td><td>${a.per_task.model_calls.toFixed(1)}</td><td>${(100 * a.cached_share).toFixed(0)}%</td><td>$${a.per_run.cost_usd.toFixed(2)}</td><td>${cents(a.cost_per_solved_usd)}</td><td>${pct(a.per_run.passed, S.common_tasks)}</td></tr>`).join("");
+
+// Agency and Pi, attempt by attempt.
+const pair = [A[0], A[1]];
+el("table-attempts").innerHTML = `<tr><th>Attempt</th><th>Agent</th><th>Input tokens</th><th>Output tokens</th><th>Model calls</th><th>Cost</th><th>Solved</th><th>Tasks</th></tr>` +
+  S.attempts.map((k) => pair.map((a) => { const r = k[a.key]; return `<tr><td>${k.attempt}</td><td style="text-align:left">${swatch(a)}${esc(a.name)}</td><td>${M(r.input_tokens, 1)}</td><td>${M(r.output_tokens, 2)}</td><td>${r.model_calls.toLocaleString()}</td><td>$${r.cost_usd.toFixed(2)}</td><td>${r.passed} (${pct(r.passed, k.tasks)})</td><td>${k.tasks}</td></tr>`; }).join("")).join("");
+const P = S.pair;
+const saving = (key) => Math.round(100 * (1 - S.attempts.reduce((s, k) => s + k.agency[key], 0) / S.attempts.reduce((s, k) => s + k.pi[key], 0)));
+el("verdict").textContent = `Across the ${P.attempts} attempts Agency used ${saving("input_tokens")}% fewer input tokens and ${saving("output_tokens")}% fewer output tokens than Pi, and cost ${saving("cost_usd")}% less. On tasks solved the two are level: Agency ${pct(P.agency.passes, P.agency.possible)}, Pi ${pct(P.pi.passes, P.pi.possible)} of ${P.tasks} tasks over ${P.attempts} attempts.`;
+</script>
+</body>
+</html>

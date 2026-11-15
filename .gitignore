@@ -1,0 +1,5 @@
+# Per-task patches, grader reports, and trial folders are kept off this branch.
+patches/
+reports/
+dist/
+.DS_Store
